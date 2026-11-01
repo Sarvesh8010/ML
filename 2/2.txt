@@ -1,0 +1,148 @@
+2.  Classify the email using the binary classification method. Email Spam detection has two 
+states: a) Normal State – Not Spam, b) Abnormal State – Spam. Use K-Nearest Neighbors and 
+Support Vector Machine for classification. Analyze their performance. 
+Dataset link: The emails.csv dataset on the Kaggle 
+https://www.kaggle.com/datasets/balaka18/email-spam-classification-dataset-csv 
+
+-------------------
+
+import pandas as pd
+import matplotlib.pyplot as plt
+
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
+
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
+
+from sklearn.metrics import (
+    accuracy_score,
+    confusion_matrix,
+    precision_score,
+    recall_score,
+    f1_score,
+    ConfusionMatrixDisplay
+)
+
+-------------
+
+df = pd.read_csv('emails.csv')
+
+print("First 5 records:")
+print(df.head())
+
+print("\nDataset Shape:", df.shape)
+
+print("\nMissing Values:", df.isnull().sum().sum())
+
+print("\nEmail Class Distribution:")
+print(df['Prediction'].value_counts())
+
+-----------
+
+# Remove Email ID and separate target
+X = df.drop(columns=['Email No.', 'Prediction'])
+y = df['Prediction']
+
+print("Input Features Shape:", X.shape)
+print("Target Shape:", y.shape)
+
+----------
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y,
+    test_size=0.2,
+    random_state=42,
+    stratify=y
+)
+
+print("Training Records:", X_train.shape[0])
+print("Testing Records:", X_test.shape[0])
+
+---------------
+
+# KNN Model
+knn_model = Pipeline([
+    ('scaler', StandardScaler()),
+    ('classifier', KNeighborsClassifier(n_neighbors=5))
+])
+
+# SVM Model
+svm_model = Pipeline([
+    ('scaler', StandardScaler()),
+    ('classifier', SVC(kernel='linear'))
+])
+
+------------
+
+# Train KNN
+knn_model.fit(X_train, y_train)
+knn_pred = knn_model.predict(X_test)
+
+# Train SVM
+svm_model.fit(X_train, y_train)
+svm_pred = svm_model.predict(X_test)
+
+print("KNN Predictions:")
+print(knn_pred[:20])
+
+print("\nSVM Predictions:")
+print(svm_pred[:20])
+
+-------------
+
+models = {
+    "KNN": knn_pred,
+    "SVM": svm_pred
+}
+
+results = []
+
+for name, pred in models.items():
+
+    accuracy = accuracy_score(y_test, pred)
+    error_rate = 1 - accuracy
+    precision = precision_score(y_test, pred)
+    recall = recall_score(y_test, pred)
+    f1 = f1_score(y_test, pred)
+
+    print("\n", name, "Confusion Matrix:")
+    print(confusion_matrix(y_test, pred))
+
+    results.append({
+        "Model": name,
+        "Accuracy": round(accuracy * 100, 2),
+        "Error Rate": round(error_rate * 100, 2),
+        "Precision": round(precision * 100, 2),
+        "Recall": round(recall * 100, 2),
+        "F1 Score": round(f1 * 100, 2)
+    })
+
+print("\nPerformance Comparison:")
+print(pd.DataFrame(results).to_string(index=False))
+
+------------------
+
+fig, axes = plt.subplots(1, 2, figsize=(10, 4))
+
+ConfusionMatrixDisplay.from_predictions(
+    y_test, knn_pred,
+    display_labels=['Not Spam', 'Spam'],
+    ax=axes[0],
+    colorbar=False
+)
+
+axes[0].set_title("KNN Confusion Matrix")
+
+ConfusionMatrixDisplay.from_predictions(
+    y_test, svm_pred,
+    display_labels=['Not Spam', 'Spam'],
+    ax=axes[1],
+    colorbar=False
+)
+
+axes[1].set_title("SVM Confusion Matrix")
+
+plt.tight_layout()
+plt.show()
